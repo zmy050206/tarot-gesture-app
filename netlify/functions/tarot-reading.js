@@ -1,7 +1,8 @@
 ﻿// Netlify Function: POST /api/tarot-reading
 // Proxies a tarot reading request to a DeepSeek-compatible chat completions API.
 // Reads OPENAI_API_KEY / OPENAI_MODEL / OPENAI_BASE_URL / OPENAI_PROVIDER from
-// the Netlify site's environment variables.
+// the Netlify site's environment variables (configured in the Netlify dashboard,
+// not committed to git).
 
 const MODEL = process.env.OPENAI_MODEL || 'deepseek-chat'
 const BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1').replace(/\/+$/, '')
@@ -61,7 +62,8 @@ async function createReading(payload) {
     return {
       source: 'fallback',
       model: null,
-      text: 'AI 解读接口还没有配置 OPENAI_API_KEY。配置后这里会生成完整 AI 分析。',
+      text:
+        'AI 解读接口还没有配置 OPENAI_API_KEY。现在先使用页面里的本地规则解读。配置密钥后，这里会生成结合问题、牌阵、正逆位和行动建议的完整 AI 分析。',
     }
   }
 
@@ -113,6 +115,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders(), body: '' }
   }
+
   if (event.httpMethod !== 'POST') {
     return jsonResponse(404, { error: 'Not found' })
   }
