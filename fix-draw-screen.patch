@@ -1,0 +1,86 @@
+From 2f8b6c5a4870ad0ba5759d12a48c2643ec8aebe4 Mon Sep 17 00:00:00 2001
+From: ZMY050206 <zmy050206@users.noreply.github.com>
+Date: Sun, 7 Jun 2026 13:18:03 +0800
+Subject: [PATCH] fix(draw-screen): P0 remove display:none block, enable
+ 'aiming' state
+
+P0: src/App.css lines 455-466 had a bulk display:none hiding
+  10 core UI elements on the draw screen (controls, draw-slots,
+  gesture hints, question summary, etc.). They already have their
+  own position:fixed/grid layout and z-index, so removing the block
+  restores the draw page.
+
+P1: src/App.tsx line 884 'point' branch now calls setDrawMode('aiming'),
+  wiring up the type/modeLabel/ritualPrompt/CSS/gestureEnergy 'aiming'
+  state that was previously dead code.
+
+P2: src/App.tsx lines 778-782 indentation fixed (8 spaces back to 6).
+---
+ src/App.css | 17 +++++------------
+ src/App.tsx | 15 ++++++++++-----
+ 2 files changed, 15 insertions(+), 17 deletions(-)
+
+diff --git a/src/App.css b/src/App.css
+index 0366ef8..548aaf9 100644
+--- a/src/App.css
++++ b/src/App.css
+@@ -452,18 +452,11 @@ button:disabled {
+   margin: 0;
+ }
+ 
+-.draw-screen .question-summary,
+-.draw-screen .draw-slots,
+-.draw-screen .controls,
+-.draw-screen .table-relics,
+-.draw-screen .deck-header,
+-.draw-screen .gesture-readout,
+-.draw-screen .gesture-guide,
+-.draw-screen .ritual-status,
+-.draw-screen .ritual-whisper,
+-.draw-screen .selection-particles {
+-  display: none;
+-}
++/* Fix P0 bug: removed the bulk display:none block that was hiding
++   10 core UI elements on the draw screen (controls, draw-slots,
++   gesture hints, question summary, etc.). Those elements already
++   have their own position:fixed/grid layout and z-index, so
++   leaving them display:none broke the entire draw page. */
+ 
+ .draw-screen .stage {
+   width: 100%;
+diff --git a/src/App.tsx b/src/App.tsx
+index 5cdfa9b..719108a 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -778,11 +778,11 @@ function App() {
+         ...orientations,
+         [card.id]: Math.random() > 0.38 ? 'upright' : 'reversed',
+       }))
+-        setPendingCard(null)
+-        setCapturingCard(null)
+-        pendingCardRef.current = null
+-        capturingCardRef.current = null
+-        pinchTapRef.current = { count: 0, lastAt: 0 }
++      setPendingCard(null)
++      setCapturingCard(null)
++      pendingCardRef.current = null
++      capturingCardRef.current = null
++      pinchTapRef.current = { count: 0, lastAt: 0 }
+       setIsRevealed(false)
+       if (nextCards.length === 3) {
+         setPhase('complete')
+@@ -884,6 +884,11 @@ function App() {
+ 
+     if (interaction.gesture === 'point') {
+       handVelocityRef.current *= 0.96
++      // Fix P1: 'aiming' state was dead code - the type/list/CSS/gestureEnergy
++      // all reference it, but nothing was ever setting drawMode to 'aiming'.
++      // Now when user points, modeLabel shows "aiming" and the deck-zone
++      // background follows the fingertip (gestureEnergy jumps to 0.92).
++      setDrawMode('aiming')
+       return
+     }
+ 
+-- 
+2.34.1
+

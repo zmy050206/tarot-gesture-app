@@ -778,11 +778,11 @@ function App() {
         ...orientations,
         [card.id]: Math.random() > 0.38 ? 'upright' : 'reversed',
       }))
-        setPendingCard(null)
-        setCapturingCard(null)
-        pendingCardRef.current = null
-        capturingCardRef.current = null
-        pinchTapRef.current = { count: 0, lastAt: 0 }
+      setPendingCard(null)
+      setCapturingCard(null)
+      pendingCardRef.current = null
+      capturingCardRef.current = null
+      pinchTapRef.current = { count: 0, lastAt: 0 }
       setIsRevealed(false)
       if (nextCards.length === 3) {
         setPhase('complete')
@@ -884,6 +884,11 @@ function App() {
 
     if (interaction.gesture === 'point') {
       handVelocityRef.current *= 0.96
+      // Fix P1: 'aiming' state was dead code - the type/list/CSS/gestureEnergy
+      // all reference it, but nothing was ever setting drawMode to 'aiming'.
+      // Now when user points, modeLabel shows "aiming" and the deck-zone
+      // background follows the fingertip (gestureEnergy jumps to 0.92).
+      setDrawMode('aiming')
       return
     }
 

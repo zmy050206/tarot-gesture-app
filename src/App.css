@@ -452,18 +452,11 @@ button:disabled {
   margin: 0;
 }
 
-.draw-screen .question-summary,
-.draw-screen .draw-slots,
-.draw-screen .controls,
-.draw-screen .table-relics,
-.draw-screen .deck-header,
-.draw-screen .gesture-readout,
-.draw-screen .gesture-guide,
-.draw-screen .ritual-status,
-.draw-screen .ritual-whisper,
-.draw-screen .selection-particles {
-  display: none;
-}
+/* Fix P0 bug: removed the bulk display:none block that was hiding
+   10 core UI elements on the draw screen (controls, draw-slots,
+   gesture hints, question summary, etc.). Those elements already
+   have their own position:fixed/grid layout and z-index, so
+   leaving them display:none broke the entire draw page. */
 
 .draw-screen .stage {
   width: 100%;
