@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   Hand,
+  MousePointer2,
   Play,
   RotateCcw,
   Sparkles,
@@ -496,6 +497,7 @@ function App() {
   const [isRevealed, setIsRevealed] = useState(false)
   const [gesture, setGesture] = useState<Gesture>('idle')
   const [cameraEnabled, setCameraEnabled] = useState(false)
+  const [controlMode, setControlMode] = useState<'camera' | 'mouse'>('camera')
   const [shuffleRun, setShuffleRun] = useState(0)
   const [shuffleProgress, setShuffleProgress] = useState(0)
   const [isGesturePaused, setIsGesturePaused] = useState(false)
@@ -505,10 +507,10 @@ function App() {
   const [capturingCard, setCapturingCard] = useState<TarotCard | null>(null)
   const [particleOrigin, setParticleOrigin] = useState({ x: 50, y: 43 })
   const [railSpacing, setRailSpacing] = useState(() =>
-    typeof window === 'undefined' ? cardSpacing : Math.max(118, Math.min(154, window.innerWidth / 9.4)),
+    typeof window === 'undefined' ? cardSpacing : Math.max(140, Math.min(154, window.innerWidth / 9.4)),
   )
   const [viewportCards, setViewportCards] = useState(() =>
-    typeof window === 'undefined' ? 9 : Math.max(7, Math.min(11, window.innerWidth / Math.max(118, Math.min(154, window.innerWidth / 9.4)))),
+    typeof window === 'undefined' ? 9 : Math.max(7, Math.min(11, window.innerWidth / Math.max(140, Math.min(154, window.innerWidth / 9.4)))),
   )
   const [gestureDebug, setGestureDebug] = useState<GestureDebug | null>(null)
 
@@ -536,7 +538,11 @@ function App() {
   const canSlide = phase === 'selecting' && selectedCards.length < 3 && drawMode !== 'capturing'
   const canSelect = phase === 'selecting' && selectedCards.length < 3 && drawMode !== 'capturing'
   const refinedQuestion = useMemo(() => refineQuestion(question), [question])
-  const visibleRadius = Math.max(4, Math.min(5, Math.ceil(viewportCards / 2)))
+  // Render only the active card + 1 neighbor on each side (max 3 in view).
+  // Previously this was Math.max(4, ..., 5) which rendered 5 cards at once,
+  // making the 4 non-active cards look like a static, decorative deck and
+  // causing z-index bleed-through (cards visually overlapping the active one).
+  const visibleRadius = Math.max(0, Math.min(1, Math.ceil(viewportCards / 2)))
 
   useEffect(() => {
     activeCardRef.current = activeCard
@@ -564,7 +570,7 @@ function App() {
 
   useEffect(() => {
     const updateViewportCards = () => {
-      const nextSpacing = Math.max(118, Math.min(154, window.innerWidth / 9.4))
+      const nextSpacing = Math.max(140, Math.min(154, window.innerWidth / 9.4))
       setRailSpacing(nextSpacing)
       setViewportCards(Math.max(7, Math.min(11, window.innerWidth / nextSpacing)))
     }
@@ -914,6 +920,45 @@ function App() {
 
     if (interaction.gesture === 'pinch') return
   }, [selectActive])
+
+  const handleHandInteractionRef = useRef(handleHandInteraction)
+  useEffect(() => {
+    handleHandInteractionRef.current = handleHandInteraction
+  }, [handleHandInteraction])
+
+  useEffect(() => {
+    if (controlMode !== 'mouse') return
+    const cursor = { x: 0.5, y: 0.5, visible: true }
+    let lastEmitAt = 0
+    const emit = (interaction: HandInteraction) => {
+      handleHandInteractionRef.current(interaction)
+    }
+    const onMouseMove = (event: MouseEvent) => {
+      cursor.x = Math.min(1, Math.max(0, event.clientX / window.innerWidth))
+      cursor.y = Math.min(1, Math.max(0, event.clientY / window.innerHeight))
+      cursor.visible = true
+      const now = performance.now()
+      if (now - lastEmitAt < 28) return
+      lastEmitAt = now
+      emit({ gesture: 'point', cursor: { ...cursor } })
+    }
+    const onMouseLeave = () => {
+      cursor.visible = false
+      emit({ gesture: 'idle', cursor: { ...cursor } })
+    }
+    const onMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return
+      emit({ gesture: 'fist' })
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseleave', onMouseLeave)
+    window.addEventListener('mousedown', onMouseDown)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseleave', onMouseLeave)
+      window.removeEventListener('mousedown', onMouseDown)
+    }
+  }, [controlMode])
 
   const beginDrag = (clientX: number) => {
     if (!canSlide) return
@@ -1273,7 +1318,14 @@ function App() {
                           '--card-back': `url(${tarotBack})`,
                           '--card-front': `url(${cardFront(card)})`,
                           transform: `translate3d(${isShuffling ? shuffleMotion.x : offset * railSpacing}px, 0, 0)`,
-                          opacity: isShuffling ? shuffleMotion.opacity : isCapturing || isPicked || distance > 5 ? 0 : 1,
+                          opacity: isShuffling
+                            ? shuffleMotion.opacity
+                            : isCapturing || isPicked || distance > 5
+                              ? 0
+                              : isActive
+                                ? 1
+                                : 0.18,
+                          filter: isActive ? 'none' : 'blur(1.5px)',
                           zIndex: isCapturing ? 96 : isPending ? 82 : isActive ? 72 : 44 - distance,
                         } as React.CSSProperties
                       }
@@ -1380,11 +1432,43 @@ function App() {
             <Camera size={18} />
             占卜镜
           </div>
-          <GestureCamera enabled={cameraEnabled} onHand={handleHandInteraction} gesture={gesture} />
-          <button type="button" className="camera-toggle" onClick={() => setCameraEnabled((value) => !value)}>
-            {cameraEnabled ? '关闭镜头' : '开启镜头'}
-          </button>
-          <p className="hint">一指让牌流向左，两指让牌流向右；五指让中心牌停驻，握拳回应这张牌。</p>
+          <div className="control-mode-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={controlMode === 'camera'}
+              className={`mode-tab ${controlMode === 'camera' ? 'active' : ''}`}
+              onClick={() => setControlMode('camera')}
+            >
+              摄像头
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={controlMode === 'mouse'}
+              className={`mode-tab ${controlMode === 'mouse' ? 'active' : ''}`}
+              onClick={() => setControlMode('mouse')}
+            >
+              鼠标 / 键盘
+            </button>
+          </div>
+          {controlMode === 'camera' ? (
+            <>
+              <GestureCamera enabled={cameraEnabled} onHand={handleHandInteraction} gesture={gesture} />
+              <button type="button" className="camera-toggle" onClick={() => setCameraEnabled((value) => !value)}>
+                {cameraEnabled ? '关闭镜头' : '开启镜头'}
+              </button>
+              <p className="hint">一指让牌流向左，两指让牌流向右；五指让中心牌停驻，握拳回应这张牌。</p>
+            </>
+          ) : (
+            <div className="mouse-panel">
+              <div className="mouse-icon-row">
+                <MousePointer2 size={36} strokeWidth={1.5} />
+              </div>
+              <p className="hint">移动鼠标定位中心牌<br />左键单击 = 抽牌</p>
+              <p className="hint hint-secondary">键盘：← → 切牌 · 空格 / 回车 确认 · Esc 取消</p>
+            </div>
+          )}
         </aside>
       </section>
       )}
