@@ -18,7 +18,9 @@ function loadLocalEnv() {
 loadLocalEnv()
 
 const PORT = Number(process.env.TAROT_AI_PORT || 8787)
-const MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini'
+const MODEL = process.env.OPENAI_MODEL || 'deepseek-chat'
+const BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1').replace(/\/+$/, '')
+const PROVIDER = process.env.OPENAI_PROVIDER || 'deepseek'
 
 function sendJson(res, status, data) {
   const body = JSON.stringify(data)
@@ -52,7 +54,17 @@ function readJson(req) {
   })
 }
 
-function buildPrompt(payload) {
+function buildSystemPrompt() {
+  return [
+    '你是一位专业、克制、现实导向的塔罗解读师。',
+    '你不使用"命中注定"这类绝对化措辞，不制造恐惧，也不替用户做决定。',
+    '如果问题涉及身心健康、法律、投资等高风险领域，提醒用户寻求专业人士帮助。',
+    '语气像专业塔罗师，不像机器模板。',
+    '输出使用 Markdown，标题简洁。',
+  ].join('\n')
+}
+
+function buildUserPrompt(payload) {
   const cards = Array.isArray(payload.cards) ? payload.cards : []
   const cardLines = cards
     .map(
@@ -61,16 +73,12 @@ function buildPrompt(payload) {
     )
     .join('\n\n')
 
-  return `你是一位专业、克制、现实导向的塔罗解读师。请基于用户问题、牌阵和三张牌做一份全方位中文分析。
+  return `请基于以下信息做一份全方位中文分析。
 
 要求：
-- 不要说“命中注定”，不要制造恐惧，也不要替用户做绝对决定。
 - 必须结合用户问题，不要只解释牌义。
 - 每张牌都要说明：牌义、它在该牌位中的含义、对现实处境的提醒。
 - 最后给出具体建议：该做什么、不该做什么、未来3天观察什么。
-- 如果问题涉及身心健康、法律、投资等高风险领域，要提醒用户寻求专业人士帮助。
-- 语气要像专业塔罗师，不要像机器模板。
-- 输出结构使用 Markdown，标题简洁。
 
 用户问题：${payload.question || '未提供'}
 整理后的占卜问题：${payload.refinedQuestion || payload.question || '未提供'}
@@ -83,16 +91,15 @@ ${cardLines}
 }
 
 function extractText(data) {
-  if (typeof data.output_text === 'string') return data.output_text
-  const parts = []
-  for (const item of data.output || []) {
-    for (const content of item.content || []) {
-      if (content.type === 'output_text' && typeof content.text === 'string') {
-        parts.push(content.text)
-      }
-    }
+  const content = data?.choices?.[0]?.message?.content
+  if (typeof content === 'string') return content.trim()
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+      .join('')
+      .trim()
   }
-  return parts.join('\n').trim()
+  return ''
 }
 
 async function createReading(payload) {
@@ -106,7 +113,7 @@ async function createReading(payload) {
     }
   }
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -114,17 +121,21 @@ async function createReading(payload) {
     },
     body: JSON.stringify({
       model: MODEL,
-      input: buildPrompt(payload),
+      messages: [
+        { role: 'system', content: buildSystemPrompt() },
+        { role: 'user', content: buildUserPrompt(payload) },
+      ],
+      temperature: 0.7,
     }),
   })
 
   const data = await response.json()
   if (!response.ok) {
-    throw new Error(data.error?.message || `OpenAI API request failed with ${response.status}`)
+    throw new Error(data.error?.message || `AI API request failed with ${response.status}`)
   }
 
   return {
-    source: 'openai',
+    source: PROVIDER,
     model: MODEL,
     text: extractText(data) || 'AI 已返回，但没有解析到文本内容。',
   }
