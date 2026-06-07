@@ -1323,8 +1323,8 @@ function App() {
                               ? 0
                               : isActive
                                 ? 1
-                                : 0.10,
-                          filter: isActive ? 'none' : 'blur(2.5px)',
+                                : 0.55,
+                          filter: isActive ? 'none' : 'blur(0.6px)',
                           zIndex: isCapturing ? 96 : isPending ? 82 : isActive ? 72 : 44 - distance,
                         } as React.CSSProperties
                       }
