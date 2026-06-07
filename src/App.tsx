@@ -538,11 +538,10 @@ function App() {
   const canSlide = phase === 'selecting' && selectedCards.length < 3 && drawMode !== 'capturing'
   const canSelect = phase === 'selecting' && selectedCards.length < 3 && drawMode !== 'capturing'
   const refinedQuestion = useMemo(() => refineQuestion(question), [question])
-  // Render only the active card + 1 neighbor on each side (max 3 in view).
-  // Previously this was Math.max(4, ..., 5) which rendered 5 cards at once,
-  // making the 4 non-active cards look like a static, decorative deck and
-  // causing z-index bleed-through (cards visually overlapping the active one).
-  const visibleRadius = Math.max(0, Math.min(1, Math.ceil(viewportCards / 2)))
+  // Render all cards in the viewport so the rail feels fully expanded.
+  // Z-fighting between neighbors is mitigated via low opacity + blur, not by
+  // hiding cards (which made the rail look like a single static card).
+  const visibleRadius = Math.max(3, Math.ceil(viewportCards / 2))
 
   useEffect(() => {
     activeCardRef.current = activeCard
@@ -1324,8 +1323,8 @@ function App() {
                               ? 0
                               : isActive
                                 ? 1
-                                : 0.18,
-                          filter: isActive ? 'none' : 'blur(1.5px)',
+                                : 0.10,
+                          filter: isActive ? 'none' : 'blur(2.5px)',
                           zIndex: isCapturing ? 96 : isPending ? 82 : isActive ? 72 : 44 - distance,
                         } as React.CSSProperties
                       }
