@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { motion } from 'framer-motion'
+import { ErrorBoundary } from './ErrorBoundary'
 import {
   Camera,
   ChevronLeft,
@@ -510,7 +511,7 @@ function App() {
     typeof window === 'undefined' ? cardSpacing : Math.max(140, Math.min(154, window.innerWidth / 9.4)),
   )
   const [viewportCards, setViewportCards] = useState(() =>
-    typeof window === 'undefined' ? 9 : Math.max(7, Math.min(11, window.innerWidth / Math.max(140, Math.min(154, window.innerWidth / 9.4)))),
+    typeof window === 'undefined' ? 9 : Math.max(5, Math.min(11, window.innerWidth / Math.max(140, Math.min(154, window.innerWidth / 9.4)))),
   )
   const [gestureDebug, setGestureDebug] = useState<GestureDebug | null>(null)
 
@@ -571,7 +572,7 @@ function App() {
     const updateViewportCards = () => {
       const nextSpacing = Math.max(140, Math.min(154, window.innerWidth / 9.4))
       setRailSpacing(nextSpacing)
-      setViewportCards(Math.max(7, Math.min(11, window.innerWidth / nextSpacing)))
+      setViewportCards(Math.max(5, Math.min(11, window.innerWidth / nextSpacing)))
     }
     updateViewportCards()
     window.addEventListener('resize', updateViewportCards)
@@ -1192,6 +1193,7 @@ function App() {
   }
 
   return (
+    <ErrorBoundary>
     <main className={`app-shell ${screen === 'draw' ? 'draw-screen' : ''} ${screen === 'reading' ? 'reading-screen' : ''}`} style={shellStyle}>
       <div className="cosmos" />
 
@@ -1453,6 +1455,19 @@ function App() {
           </div>
           {controlMode === 'camera' ? (
             <>
+              {controlMode === 'camera' && !cameraEnabled && (
+                <div className="camera-fallback-hint" role="note">
+                  <strong>没有摄像头？</strong>
+                  <span>切到「鼠标 / 键盘」模式同样可以体验全部占卜流程。</span>
+                  <button
+                    type="button"
+                    className="camera-fallback-switch"
+                    onClick={() => setControlMode('mouse')}
+                  >
+                    切换到鼠标模式
+                  </button>
+                </div>
+              )}
               <GestureCamera enabled={cameraEnabled} onHand={handleHandInteraction} gesture={gesture} />
               <button type="button" className="camera-toggle" onClick={() => setCameraEnabled((value) => !value)}>
                 {cameraEnabled ? '关闭镜头' : '开启镜头'}
@@ -1629,6 +1644,7 @@ function App() {
       </section>
       )}
     </main>
+    </ErrorBoundary>
   )
 }
 

@@ -2478,3 +2478,124 @@ button:disabled {
   opacity: 0.7;
   font-size: 12px;
 }
+
+/* ---- camera fallback hint (shown when camera is off + mode is camera) ---- */
+.camera-fallback-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, rgba(246, 185, 80, 0.12), rgba(246, 185, 80, 0.04));
+  border: 1px solid rgba(246, 185, 80, 0.28);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.camera-fallback-hint strong {
+  color: #f6b950;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.camera-fallback-hint span {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.camera-fallback-switch {
+  align-self: flex-start;
+  background: rgba(246, 185, 80, 0.18);
+  color: #f6b950;
+  border: 1px solid rgba(246, 185, 80, 0.42);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.camera-fallback-switch:hover {
+  background: rgba(246, 185, 80, 0.28);
+  border-color: rgba(246, 185, 80, 0.6);
+}
+
+/* ---- error boundary fallback (root-level crash screen) ---- */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 100vh;
+  padding: 32px 24px;
+  background: radial-gradient(ellipse at top, #1a1233 0%, #0a081a 100%);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: inherit;
+  text-align: center;
+}
+
+.error-boundary h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #f6b950;
+  margin: 0;
+}
+
+.error-boundary p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.6;
+}
+
+.error-boundary ul {
+  text-align: left;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.8;
+  max-width: 360px;
+  padding-left: 18px;
+  margin: 0;
+}
+
+.error-boundary-detail {
+  max-width: 520px;
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  color: rgba(255, 180, 120, 0.92);
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+
+.error-boundary-retry {
+  background: #f6b950;
+  color: #1a1233;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s, transform 0.1s;
+}
+
+.error-boundary-retry:hover {
+  background: #ffc869;
+}
+
+.error-boundary-retry:active {
+  transform: scale(0.97);
+}
